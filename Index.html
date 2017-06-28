@@ -1,0 +1,98 @@
+<html>
+
+<head>
+    <title>Zip Code Lookup Sample</title>
+    <link rel="stylesheet" type="text/css" href="assets/css/reset.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.0/jquery.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Audiowide|Bungee" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/4.1.2/firebase.js"></script>
+    <!-- <link rel="stylesheet" type="text/css" href="assets/css/styles.css"> -->
+</head>
+
+<body>
+    <div class="container">
+        <div class="row option-row-styles">
+            <div class="col-md-12 col-max-width">
+                <div class="text-left well well-lg">
+                    <h1>Zip Code Look-up</h1>
+                    <form>
+                        <div class="form-group">
+                            <label for="zip">Zip:</label>
+                            <input id="zip" name="zip" />
+                        </div>
+                        <div class="form-group">
+                            <label for="city">City:</label>
+                            <aside id="city_wrap">
+                                <input id="city" name="city" />
+                            </aside>
+                        </div>
+                        <div class="form-group">
+                            <label for="state">State:</label>
+                            <input id="state" name="state" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    /*shamelessly borrowed from http://nobleintentstudio.com/blog/zip-code-to-city-state-lookup/*/
+    $(document).ready(function() {
+        //when the user clicks off of the zip field:
+        $('#zip').keyup(function() {
+            if ($(this).val().length == 5) {
+                var zip = $(this).val();
+                var city = '';
+                var state = '';
+                console.log(zip);
+                //make a request to the google geocode api
+                $.getJSON('http://maps.googleapis.com/maps/api/geocode/json?address=' + zip)
+                    .success(function(response) {
+                        //find the city and state
+                        var address_components = response.results[0].address_components;
+                        var geometry = response.results[0].geometry.location;
+                        console.log(geometry);
+                        $.each(address_components, function(index, component) {
+                            var types = component.types;
+                            $.each(types, function(index, type) {
+                                if (type == 'locality') {
+                                    city = component.long_name;
+                                }
+                                if (type == 'administrative_area_level_1') {
+                                    state = component.short_name;
+                                }
+                            });
+                        });
+                        //pre-fill the city and state
+                        var cities = response.results[0].postcode_localities;
+                        if (cities) {
+                            //turn city into a dropdown if necessary
+                            var $select = $(document.createElement('select'));
+                            console.log(cities);
+                            $.each(cities, function(index, locality) {
+                                var $option = $(document.createElement('option'));
+                                $option.html(locality);
+                                $option.attr('value', locality);
+                                if (city == locality) {
+                                    $option.attr('selected', 'selected');
+                                }
+                                $select.append($option);
+                            });
+                            $select.attr('id', 'city');
+                            $('#city_wrap').html($select);
+                        } else {
+                            $('#city').val(city);
+                        }
+                        $('#state').val(state);
+                    });
+            }
+        });
+    });
+    </script>
+</body>
+
+</html>
