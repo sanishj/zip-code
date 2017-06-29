@@ -1,6 +1,8 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
     <title>Zip Code Lookup Sample</title>
     <link rel="stylesheet" type="text/css" href="assets/css/reset.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
@@ -11,6 +13,15 @@
     <link href="https://fonts.googleapis.com/css?family=Audiowide|Bungee" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/4.1.2/firebase.js"></script>
     <!-- <link rel="stylesheet" type="text/css" href="assets/css/styles.css"> -->
+    <script src="https://maps.googleapis.com/maps/api/js?sensor=false&libraries=places,visualization&v=3.exp"></script>
+    <style>
+    .map {
+        height: 400px;
+        /*width: 100%;*/
+        /*border: 6px solid #dedede;*/
+        margin: 0 auto;
+    }
+    </style>
 </head>
 
 <body>
@@ -39,6 +50,12 @@
             </div>
         </div>
     </div>
+    <div class="container">
+        <div class="row option-row-styles well well-lg">
+            <div id="map" class="map col-md-12">
+            </div>
+        </div>
+    </div>
     <script>
     /*shamelessly borrowed from http://nobleintentstudio.com/blog/zip-code-to-city-state-lookup/*/
     $(document).ready(function() {
@@ -56,6 +73,10 @@
                         var address_components = response.results[0].address_components;
                         var geometry = response.results[0].geometry.location;
                         console.log(geometry);
+                        var lat = response.results[0].geometry.location.lat;
+                        console.log("Latitude: " + lat);
+                        var lng = response.results[0].geometry.location.lng;
+                        console.log("Longitude: " + lng);
                         $.each(address_components, function(index, component) {
                             var types = component.types;
                             $.each(types, function(index, type) {
@@ -91,6 +112,74 @@
                     });
             }
         });
+        var map;
+        var infoWindow;
+        var service;
+
+        function initialize() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+                center: new google.maps.LatLng(41.868863, -87.62456600000002),
+                zoom: 11,
+                styles: [{
+                    stylers: [{
+                        visibility: 'simplified'
+                    }]
+                }, {
+                    elementType: 'labels',
+                    stylers: [{
+                        visibility: 'on'
+                    }]
+                }]
+            });
+
+            infoWindow = new google.maps.InfoWindow();
+            service = new google.maps.places.PlacesService(map);
+
+            google.maps.event.addListenerOnce(map, 'bounds_changed', performSearch);
+        }
+
+        function performSearch() {
+            var request = {
+                bounds: new google.maps.LatLngBounds(
+                    new google.maps.LatLng(41.8702132302915, -87.62302206970851),
+                    new google.maps.LatLng(41.8675152697085, -87.62572003029152)),
+                keyword: 'restaurants',
+                types: ['restaurants']
+            };
+            service.radarSearch(request, callback);
+        }
+
+        function callback(results, status) {
+            if (status != google.maps.places.PlacesServiceStatus.OK) {
+                alert(status);
+                return;
+            }
+            for (var i = 0, result; result = results[i]; i++) {
+                createMarker(result);
+            }
+        }
+
+        function createMarker(place) {
+            var marker = new google.maps.Marker({
+                map: map,
+                position: place.geometry.location,
+                icon: 'http://www.google.com/intl/en_us/mapfiles/ms/micons/yellow-dot.png'
+            });
+
+            google.maps.event.addListener(marker, 'click', function() {
+                service.getDetails(place, function(result, status) {
+                    if (status != google.maps.places.PlacesServiceStatus.OK) {
+                        alert(status);
+                        return;
+                    }
+                    infoWindow.setContent(result.name);
+                    infoWindow.open(map, marker);
+                });
+            });
+        }
+
+        initialize();
     });
     </script>
 </body>
